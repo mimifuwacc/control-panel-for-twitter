@@ -17,6 +17,17 @@
         <input type="checkbox" name="enabled">
         <span class="toggle"></span>
       </label>
+      <section>
+        <label class="button">
+          <span id="exportConfigLabel">Export configuration for bug report</span>
+          <input type="button" value="Export" id="export-config">
+        </label>
+        <label class="button">
+          <span data-i18n="importConfigLabel">Import configuration</span>
+          <input type="button" value="Import" id="import-config">
+        </label>
+        <input type="file" id="import-config-file" accept=".json,.txt" style="display: none">
+      </section>
     </section>
     <section class="group labelled">
       <label id="homeTimelineOptionsLabel">
@@ -915,17 +926,6 @@
             <span class="toggle"></span>
           </label>
         </section>
-      </section>
-      <section>
-        <label class="button">
-          <span id="exportConfigLabel">Export configuration for bug report</span>
-          <input type="button" value="Export" id="export-config">
-        </label>
-        <label class="button">
-          <span data-i18n="importConfigLabel">Import configuration</span>
-          <input type="button" value="Import" id="import-config">
-        </label>
-        <input type="file" id="import-config-file" accept=".json,.txt" style="display: none">
       </section>
     </section>
 
