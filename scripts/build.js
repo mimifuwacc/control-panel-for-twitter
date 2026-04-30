@@ -72,7 +72,6 @@ function copyDirectory(src, dest, ignore) {
 for (let manifestVersion of manifestVersions) {
   console.log(`\nBuilding MV${manifestVersion} version`)
   let manifestFile = `manifest.mv${manifestVersion}.json`
-  let manifestData = require(`../${manifestFile}`)
 
   // Create build directory
   const buildDir = './build'
@@ -93,14 +92,18 @@ for (let manifestVersion of manifestVersions) {
     fs.copyFileSync(`./${manifestFile}`, './manifest.json')
   }
 
+  // Generate timestamp for version
+  const now = new Date()
+  const timestamp = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}.${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
+
   // Build in the build directory
   console.log('Building extension...')
   execSync(`web-ext build --source-dir=${buildDir} --artifacts-dir=${buildDir}`, {stdio: 'inherit'})
 
   // Rename the output file
-  let renameTo = `${buildDir}/control_panel_for_twitter-${manifestData['version']}.mv${manifestVersion}.zip`
+  let renameTo = `${buildDir}/control_panel_for_twitter-${timestamp}.mv${manifestVersion}.zip`
   fs.renameSync(
-    `${buildDir}/control_panel_for_twitter-${manifestData['version']}.zip`,
+    `${buildDir}/control_panel_for_twitter-${require(`../${manifestFile}`)['version']}.zip`,
     renameTo,
   )
   console.log('Built:', path.resolve(renameTo))
