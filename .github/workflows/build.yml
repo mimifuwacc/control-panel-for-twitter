@@ -33,14 +33,14 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "version=$(node -p "require('./manifest.mv3.json').version")" >> $GITHUB_OUTPUT
+        run: echo "version=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
-          files: build/control_panel_for_twitter-${{ steps.version.outputs.version }}.mv3.zip
+          files: build/control_panel_for_twitter-*.mv3.zip
           draft: false
           prerelease: false
           generate_release_notes: true
