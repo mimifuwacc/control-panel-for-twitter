@@ -2,6 +2,8 @@
 browser_action.html
 manifest.json
 node_modules/
+package-lock.json
+.pnpm-store/
 promo/*.png
 !promo/app-store.png
 scripts/locales/base-translations.json
