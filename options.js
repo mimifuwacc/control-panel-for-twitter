@@ -368,11 +368,7 @@ function importConfig(file) {
 
       if (confirm('Import this configuration? This will replace all current settings.')) {
         chrome.storage.local.set(validatedConfig, () => {
-          optionsConfig = {...defaultConfig, ...validatedConfig}
-          updateDisplay()
-          updateFormControls()
-          alert('Configuration imported successfully!')
-          $importConfigFile.value = '' // Reset file input to allow re-importing the same file
+          location.reload()
         })
       } else {
         $importConfigFile.value = '' // Reset file input when user cancels
