@@ -34,58 +34,55 @@ const ignoreFiles = [
   'build/',
 ]
 
-function copyDirectory(src, dest, ignore) {
-  if (!fs.existsSync(dest)) {
-    fs.mkdirSync(dest, {recursive: true})
-  }
+function shouldIgnoreFile(filePath) {
+  const normalizedPath = filePath.replace(/\\/g, '/')
+  return ignoreFiles.some(pattern => {
+    const patternStr = pattern.replace(/\/$/, '')
+    if (pattern.endsWith('/')) {
+      return normalizedPath.startsWith(patternStr) || normalizedPath.includes(`/${patternStr}/`)
+    }
+    return normalizedPath.endsWith(patternStr) || normalizedPath === patternStr
+  })
+}
 
-  const entries = fs.readdirSync(src, {withFileTypes: true})
+function createZip(sourceDir, outputPath) {
+  // Create a list of files to include
+  const filesToInclude = []
 
-  for (let entry of entries) {
-    const srcPath = path.join(src, entry.name)
-    const destPath = path.join(dest, entry.name)
+  function collectFiles(dir) {
+    const entries = fs.readdirSync(dir, {withFileTypes: true})
 
-    // Check if should ignore
-    const shouldIgnore = ignore.some(pattern => {
-      const patternStr = pattern.replace(/\/$/, '')
-      if (pattern.endsWith('/')) {
-        // Directory pattern
-        return srcPath.includes(`/${patternStr}`) || srcPath.endsWith(patternStr)
-      } else {
-        // File pattern
-        return srcPath.endsWith(patternStr) || srcPath === `./${patternStr}`
+    for (let entry of entries) {
+      const fullPath = path.join(dir, entry.name)
+      const relativePath = path.relative(sourceDir, fullPath)
+
+      if (shouldIgnoreFile(relativePath)) {
+        continue
       }
-    })
 
-    if (shouldIgnore) {
-      continue
-    }
-
-    if (entry.isDirectory()) {
-      copyDirectory(srcPath, destPath, ignore)
-    } else {
-      fs.copyFileSync(srcPath, destPath)
+      if (entry.isDirectory()) {
+        collectFiles(fullPath)
+      } else {
+        filesToInclude.push(relativePath)
+      }
     }
   }
+
+  collectFiles(sourceDir)
+
+  // Create zip using system zip command
+  const args = [
+    '-r',  // recursive
+    outputPath,
+    ...filesToInclude
+  ]
+
+  execSync(`zip ${args.join(' ')}`, {cwd: sourceDir, stdio: 'inherit'})
 }
 
 for (let manifestVersion of manifestVersions) {
   console.log(`\nBuilding MV${manifestVersion} version`)
   let manifestFile = `manifest.mv${manifestVersion}.json`
-
-  // Create build directory
-  const buildDir = './build'
-  if (fs.existsSync(buildDir)) {
-    fs.rmSync(buildDir, {recursive: true, force: true})
-  }
-  fs.mkdirSync(buildDir, {recursive: true})
-
-  // Copy files to build directory
-  console.log('Copying files to build directory...')
-  copyDirectory('./', buildDir, ignoreFiles)
-
-  // Copy manifest.json
-  fs.copyFileSync(`./${manifestFile}`, `${buildDir}/manifest.json`)
 
   // Also copy to root for development
   if (manifestVersion === 3) {
@@ -96,15 +93,15 @@ for (let manifestVersion of manifestVersions) {
   const now = new Date()
   const timestamp = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}.${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
 
-  // Build in the build directory
-  console.log('Building extension...')
-  execSync(`web-ext build --source-dir=${buildDir} --artifacts-dir=${buildDir}`, {stdio: 'inherit'})
+  // Create zip file
+  console.log('Creating zip file...')
+  const outputPath = `./build/control_panel_for_twitter-${timestamp}.mv${manifestVersion}.zip`
 
-  // Rename the output file
-  let renameTo = `${buildDir}/control_panel_for_twitter-${timestamp}.mv${manifestVersion}.zip`
-  fs.renameSync(
-    `${buildDir}/control_panel_for_twitter-${require(`../${manifestFile}`)['version']}.zip`,
-    renameTo,
-  )
-  console.log('Built:', path.resolve(renameTo))
+  // Ensure build directory exists
+  if (!fs.existsSync('./build')) {
+    fs.mkdirSync('./build', {recursive: true})
+  }
+
+  createZip('./', outputPath)
+  console.log('Built:', path.resolve(outputPath))
 }
