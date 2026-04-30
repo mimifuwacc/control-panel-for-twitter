@@ -71,6 +71,9 @@
   "exportConfigLabel": {
     "message": "Exportar configuración para informe de errores"
   },
+  "importConfigLabel": {
+    "message": "Importar configuración"
+  },
   "extensionDescription": {
     "message": "Le brinda más control sobre Twitter y agrega funciones faltantes y mejoras en la interfaz"
   },
