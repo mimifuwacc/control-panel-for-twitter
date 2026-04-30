@@ -335,6 +335,8 @@ let checkboxGroups
 let $experiments = /** @type {HTMLDetailsElement} */ (document.querySelector('details#experiments'))
 let $exportConfig = document.querySelector('#export-config')
 let $form = document.querySelector('form')
+let $importConfig = /** @type {HTMLInputElement} */ (document.querySelector('#import-config'))
+let $importConfigFile = /** @type {HTMLInputElement} */ (document.querySelector('#import-config-file'))
 let $hideQuotesFrom =  /** @type {HTMLDivElement} */ (document.querySelector('#hideQuotesFrom'))
 let $hideQuotesFromDetails = /** @type {HTMLDetailsElement} */ (document.querySelector('details#hideQuotesFromDetails'))
 let $hideQuotesFromLabel = /** @type {HTMLElement} */ (document.querySelector('#hideQuotesFromLabel'))
@@ -354,6 +356,92 @@ function exportConfig() {
   ], {type: 'text/plain'}))
   $a.click()
   URL.revokeObjectURL($a.href)
+}
+
+function importConfig(file) {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const result = /** @type {string} */ (e.target.result)
+      const importedConfig = JSON.parse(result)
+      const validatedConfig = validateConfig(importedConfig)
+
+      if (confirm('Import this configuration? This will replace all current settings.')) {
+        chrome.storage.local.set(validatedConfig, () => {
+          optionsConfig = {...defaultConfig, ...validatedConfig}
+          updateDisplay()
+          updateFormControls()
+          alert('Configuration imported successfully!')
+          $importConfigFile.value = '' // Reset file input to allow re-importing the same file
+        })
+      } else {
+        $importConfigFile.value = '' // Reset file input when user cancels
+      }
+    } catch (error) {
+      alert('Error importing configuration: ' + error.message)
+      $importConfigFile.value = '' // Reset file input on error
+    }
+  }
+  reader.onerror = () => {
+    alert('Error reading file. Please try again.')
+    $importConfigFile.value = '' // Reset file input on read error
+  }
+  reader.readAsText(file)
+}
+
+function validateConfig(config) {
+  if (!config || typeof config !== 'object') {
+    throw new Error('Invalid configuration: not an object')
+  }
+
+  /** @type {Partial<import('./types').Config>} */
+  const validatedConfig = {}
+  const unknownKeys = []
+
+  for (const [key, value] of Object.entries(config)) {
+    if (!(key in defaultConfig)) {
+      // Filter out unknown keys from newer versions
+      unknownKeys.push(key)
+      continue
+    }
+
+    const defaultValue = defaultConfig[key]
+
+    // Type validation based on default config types
+    if (typeof defaultValue === 'boolean') {
+      if (typeof value !== 'boolean') {
+        throw new Error(`Invalid type for ${key}: expected boolean, got ${typeof value}`)
+      }
+      validatedConfig[key] = value
+    } else if (typeof defaultValue === 'string') {
+      if (typeof value !== 'string') {
+        throw new Error(`Invalid type for ${key}: expected string, got ${typeof value}`)
+      }
+      validatedConfig[key] = value
+    } else if (Array.isArray(defaultValue)) {
+      if (!Array.isArray(value)) {
+        throw new Error(`Invalid type for ${key}: expected array, got ${typeof value}`)
+      }
+      validatedConfig[key] = value
+    } else if (typeof defaultValue === 'number') {
+      if (typeof value !== 'number') {
+        throw new Error(`Invalid type for ${key}: expected number, got ${typeof value}`)
+      }
+      validatedConfig[key] = value
+    } else {
+      // For any other type, just use the value as-is
+      validatedConfig[key] = value
+    }
+  }
+
+  // Fill in missing keys with defaults from older config versions
+  for (const key of Object.keys(defaultConfig)) {
+    if (!(key in validatedConfig)) {
+      validatedConfig[key] = defaultConfig[key]
+    }
+  }
+
+  return /** @type {import('./types').Config} */ (validatedConfig)
 }
 
 function formatFollowerCount(num) {
@@ -622,6 +710,14 @@ function main() {
     $body.classList.toggle('debug', optionsConfig.debug === true)
     $experiments.open = Boolean(optionsConfig.customCss)
     $exportConfig.addEventListener('click', exportConfig)
+    $importConfig.addEventListener('click', () => $importConfigFile.click())
+    $importConfigFile.addEventListener('change', (e) => {
+      const target = /** @type {HTMLInputElement} */ (e.target)
+      const file = target.files?.[0]
+      if (file) {
+        importConfig(file)
+      }
+    })
     $form.addEventListener('change', onFormChanged)
     $hideQuotesFromDetails.addEventListener('toggle', updateHideQuotesFromDisplay)
     $mutedQuotesDetails.addEventListener('toggle', updateMutedQuotesDisplay)
